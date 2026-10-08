@@ -37,13 +37,27 @@ resource "aws_vpc_security_group_egress_rule" "all_out" {
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
 }
+
 # The web server (the house)
 resource "aws_instance" "web" {
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = "t3.micro"
   subnet_id                   = aws_subnet.public_a.id
   vpc_security_group_ids      = [aws_security_group.web.id]
+  iam_instance_profile        = aws_iam_instance_profile.web.name
   associate_public_ip_address = true
+  # Require IMDSv2: the info desk needs a session token (PIN)
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+  }
+
+  # Encrypt the server's disk
+  root_block_device {
+    encrypted   = true
+    volume_type = "gp3"
+  }
 
   # The move-in checklist: runs once, on first boot
   user_data = <<-EOF
