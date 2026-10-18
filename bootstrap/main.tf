@@ -60,3 +60,32 @@ resource "aws_s3_bucket_public_access_block" "tf_state" {
 output "state_bucket_name" {
   value = aws_s3_bucket.tf_state.bucket
 }
+# Rule on the vault door: refuse any request that isn't using HTTPS
+data "aws_iam_policy_document" "tf_state_tls_only" {
+  statement {
+    sid     = "DenyInsecureTransport"
+    effect  = "Deny"
+    actions = ["s3:*"]
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    resources = [
+      aws_s3_bucket.tf_state.arn,        # the bucket itself
+      "${aws_s3_bucket.tf_state.arn}/*", # every file inside it
+    ]
+
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"] # "if the request is NOT encrypted..."
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "tf_state" {
+  bucket = aws_s3_bucket.tf_state.id
+  policy = data.aws_iam_policy_document.tf_state_tls_only.json
+}
