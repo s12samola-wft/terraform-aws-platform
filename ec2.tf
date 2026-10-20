@@ -13,7 +13,7 @@ data "aws_ami" "amazon_linux" {
 resource "aws_security_group" "web" {
   name        = "web-sg"
   description = "Allow HTTP in, all traffic out"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = module.vpc.vpc_id
 
   tags = {
     Name = "web-sg"
@@ -42,7 +42,7 @@ resource "aws_vpc_security_group_egress_rule" "all_out" {
 resource "aws_instance" "web" {
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.public_a.id
+  subnet_id                   = module.vpc.public_subnet_ids[0]
   vpc_security_group_ids      = [aws_security_group.web.id]
   iam_instance_profile        = aws_iam_instance_profile.web.name
   associate_public_ip_address = true
